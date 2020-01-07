@@ -1,4 +1,4 @@
-importScripts( 'artoolkitNFT.min.js' );
+importScripts( 'artoolkitNft.min.js' );
 
 self.onmessage = e => {
     let msg = e.data;
