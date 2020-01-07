@@ -21,6 +21,16 @@ let trackedMatrix = {
     ]
 }
 
+var settings = {
+    autoRotate: {
+        x: 0,
+        y: 0.01,
+        z: 0,
+    }
+}
+
+let autoRotate;
+
 let ARObjects = {}
 let MarkerId = undefined;
 
@@ -101,6 +111,8 @@ function start( container, video, input_width, input_height, canvas_draw, render
     camera.matrixAutoUpdate = false;
     scene.add( camera );
 
+
+
     
 /**
  * ROOT
@@ -111,13 +123,22 @@ function start( container, video, input_width, input_height, canvas_draw, render
     scene.add( root );    
 
 
+
+
 /**
  * OBJECT
  */     
+
+    let ARVideo = document.getElementById( 'arvideo' );
+    let texture = new THREE.VideoTexture( ARVideo );
+
+    ARVideo.play();
+
     let material = new THREE.MeshStandardMaterial( { 
         color: 0xffffff,
         roughness: 0.4,
         metalness: 0.8,
+        map: texture         
     } );
 
 
@@ -351,6 +372,12 @@ function start( container, video, input_width, input_height, canvas_draw, render
 
             // set matrix of 'root' by detected 'world' matrix
             setMatrix( root.matrix, trackedMatrix.interpolated );
+
+            // autorotate
+            ARObjects[33].rotation.y = ARObjects[33].rotation.y + settings.autoRotate.y;
+            ARObjects[34].rotation.y = ARObjects[34].rotation.y + settings.autoRotate.y;
+            ARObjects[0].rotation.y = ARObjects[0].rotation.y + settings.autoRotate.y;
+            ARObjects[3].rotation.y = ARObjects[3].rotation.y + settings.autoRotate.y;
         }
 
         
