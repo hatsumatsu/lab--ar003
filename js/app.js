@@ -197,7 +197,7 @@ function start( container, video, input_width, input_height, canvas_draw, render
 
 
         pscale = 320 / Math.max( vw, vh / 3 * 4 );
-        sscale = isMobile() ? window.outerWidth / input_width : 1;
+        sscale = 1;
 
         sw = vw * sscale;
         sh = vh * sscale;
