@@ -9,12 +9,14 @@
 </head>
 <body class="loading">
     
+
 <!--
 ==================
 STATS    
 ==================
 -->
     
+
     <div id="stats" class="ui stats">    
         
         <div id="stats1" class="stats-item">
@@ -31,12 +33,14 @@ STATS
         
     </div>
     
+
 <!--
 ==================
-CAMERA VIDEO & CANVAS    
+CAMERA VIDEO    
 ==================
 -->    
     
+
     <div id="app">
         <video 
             loop 
@@ -45,8 +49,6 @@ CAMERA VIDEO & CANVAS
             playsinline 
             id="video">
         </video>
-        
-        <canvas id="canvas"></canvas>
     </div>
     
     
@@ -91,7 +93,6 @@ document.getElementById( 'stats2' ).appendChild( statsWorker.dom );
  */        
 let container = document.getElementById( 'app' );
 let video = document.getElementById( 'video' );
-let canvas = document.getElementById( 'canvas' );
         
 
 /**
@@ -134,7 +135,6 @@ if( navigator.mediaDevices && navigator.mediaDevices.getUserMedia ) {
                 video, 
                 video.videoWidth, 
                 video.videoHeight, 
-                canvas, 
                 function() { 
                     statsMain.update()
                 }, 

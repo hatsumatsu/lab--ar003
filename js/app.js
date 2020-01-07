@@ -1,8 +1,23 @@
-function isMobile() {
-    return /Android|mobile|iPad|iPhone/i.test(navigator.userAgent);
-}
+/**
+ * init getUserMedia
+ * init THREE.js scene
+ * init WebWorker
+ * --> init camera matrix
+ * 
+ * function updateScene()
+ * --> function addItem()
+ * --> function removeItem()
+ *
+ * process()
+ * render() 
+ *
+ *
+ * handle resize
+ * 
+ **/
 
-const frameLength = 200; // in ms
+
+
 const interpolationFactor = 2;
 
 let trackedMatrix = {
@@ -48,7 +63,7 @@ let setMatrix = function( matrix, value ) {
     }
 };
 
-function start( container, video, input_width, input_height, canvas_draw, render_update, track_update ) {
+function start( container, video, input_width, input_height, render_update, track_update ) {
     let vw, vh;
     let sw, sh;
     let pscale, sscale;
@@ -65,12 +80,14 @@ function start( container, video, input_width, input_height, canvas_draw, render
  * RENDERER
  */
     let renderer = new THREE.WebGLRenderer( { 
-        canvas: canvas_draw, 
         alpha: true, 
         antialias: true 
     } );
     
     renderer.setPixelRatio( window.devicePixelRatio );
+
+    renderer.domElement.setAttribute( 'id', 'canvas' );
+    document.getElementById( 'app' ).appendChild( renderer.domElement );
 
     
 /**
@@ -223,27 +240,22 @@ function start( container, video, input_width, input_height, canvas_draw, render
         sw = vw * sscale;
         sh = vh * sscale;
 
-        // video.style.width = sw + 'px';
-        // video.style.height = sh + 'px';
-        // container.style.width = sw + 'px';
-        // container.style.height = sh + 'px';
-        // canvas_draw.style.clientWidth = sw + 'px';
-        // canvas_draw.style.clientHeight = sh + 'px';
-
-        canvas_draw.width = sw;
-        canvas_draw.height = sh;
+        renderer.domElement.width = sw;
+        renderer.domElement.height = sh;
         w = vw * pscale;
         h = vh * pscale;
         pw = Math.max( w, h / 3 * 4 );
         ph = Math.max( h, w / 4 * 3 );
         ox = ( pw - w ) / 2;
         oy = ( ph - h ) / 2;
-        // canvas_process.style.clientWidth = pw + 'px';
-        // canvas_process.style.clientHeight = ph + 'px';
+
+
         canvas_process.width = pw;
         canvas_process.height = ph;
 
+
         renderer.setSize( sw, sh );
+
 
         console.table( [
             ['vw', vw],
@@ -273,11 +285,11 @@ function start( container, video, input_width, input_height, canvas_draw, render
         } );
 
         worker.onmessage = ( event ) => {
-            let message = event.data; 
+            let data = event.data; 
 
-            switch( message.type ) {
+            switch( data.type ) {
                 case 'loaded': {                    
-                    let proj = JSON.parse( message.proj );
+                    let proj = JSON.parse( data.proj );
                     let ratioW = pw / w;
                     let ratioH = ph / h;
                     
@@ -299,7 +311,7 @@ function start( container, video, input_width, input_height, canvas_draw, render
                 }
 
                 case 'found': {
-                    found( message );
+                    found( data );
                     
                     break;
                 }
@@ -324,17 +336,17 @@ function start( container, video, input_width, input_height, canvas_draw, render
     let world;
 
 
-    let found = ( message ) => {
-        if( !message ) {
+    let found = ( data ) => {
+        if( !data ) {
             console.log( 'not found' );
 
             world = null;
             MarkerId = undefined;
         } else {
-            console.log( 'found', message.markerId );
+            console.log( 'found', data.markerId );
 
-            world = JSON.parse( message.matrixGL_RH );
-            MarkerId = message.markerId;
+            world = JSON.parse( data.matrixGL_RH );
+            MarkerId = data.markerId;
         }
     };
     
