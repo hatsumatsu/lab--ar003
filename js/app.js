@@ -196,7 +196,7 @@ function start( container, video, input_width, input_height, canvas_draw, render
         vh = input_height;
 
 
-        pscale = 320 / Math.max( vw, vh / 3 * 4 );
+        pscale = 1;
         sscale = 1;
 
         sw = vw * sscale;
@@ -260,14 +260,14 @@ function start( container, video, input_width, input_height, canvas_draw, render
                     let ratioW = pw / w;
                     let ratioH = ph / h;
                     
-                    // proj[0] *= ratioW;
-                    // proj[4] *= ratioW;
-                    // proj[8] *= ratioW;
-                    // proj[12] *= ratioW;
-                    // proj[1] *= ratioH;
-                    // proj[5] *= ratioH;
-                    // proj[9] *= ratioH;
-                    // proj[13] *= ratioH;
+                    proj[0] *= ratioW;
+                    proj[4] *= ratioW;
+                    proj[8] *= ratioW;
+                    proj[12] *= ratioW;
+                    proj[1] *= ratioH;
+                    proj[5] *= ratioH;
+                    proj[9] *= ratioH;
+                    proj[13] *= ratioH;
                     
                     // set camera matrix to detected 'projection' matrix
                     setMatrix( camera.projectionMatrix, proj );
