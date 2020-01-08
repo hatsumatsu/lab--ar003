@@ -73,7 +73,7 @@ body.loading>* {
   font-size: 0.75rem;
 }
 
-#stats div {
+.stats div {
   position: relative !important;
 }
 
