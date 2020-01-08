@@ -281,8 +281,8 @@ let initTracking = function() {
     renderer.domElement.height = sh;
     w = vw * pscale;
     h = vh * pscale;
-    pw = Math.max( w, h / 3 * 4 );
-    ph = Math.max( h, w / 4 * 3 );
+    pw = Math.max( w, h / 3 * 4 ); // this is still needed because processing happens in landscape orientation
+    ph = Math.max( h, w / 4 * 3 ); // this is still needed because processing happens in landscape orientation
     ox = ( pw - w ) / 2;
     oy = ( ph - h ) / 2;
 
