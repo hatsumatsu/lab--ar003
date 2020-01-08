@@ -79,73 +79,67 @@ VIDEO
 /**
  * STATS
  */
-let statsMain = new Stats();
-statsMain.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
-document.getElementById( 'stats1' ).appendChild( statsMain.dom );
 
-let statsWorker = new Stats();
-statsWorker.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
-document.getElementById( 'stats2' ).appendChild( statsWorker.dom );
         
         
-/**
- * APP / ELEMENTS
- */        
-let container = document.getElementById( 'app' );
-let video = document.getElementById( 'video' );
+// /**
+//  * APP / ELEMENTS
+//  */        
+// let container = document.getElementById( 'app' );
+// let video = document.getElementById( 'video' );
         
 
-/**
- * APP / VIDEO STREAM
- */               
-if( navigator.mediaDevices && navigator.mediaDevices.getUserMedia ) {
-    let hint = {
-        audio: false,
-        video: true
-    };
+// /**
+//  * APP / VIDEO STREAM
+//  */               
+// if( navigator.mediaDevices && navigator.mediaDevices.getUserMedia ) {
+//     let hint = {
+//         audio: false,
+//         video: true
+//     };
 
-    if( window.innerWidth < 800 ) {
-        let width = ( window.innerWidth < window.innerHeight ) ? 240 : 360;
-        let height = ( window.innerWidth < window.innerHeight ) ? 360 : 240;
+//     if( window.innerWidth < 800 ) {
+//         let width = ( window.innerWidth < window.innerHeight ) ? 240 : 360;
+//         let height = ( window.innerWidth < window.innerHeight ) ? 360 : 240;
 
-        let aspectRatio = window.innerWidth / window.innerHeight;
+//         let aspectRatio = window.innerWidth / window.innerHeight;
 
-        console.log( width, height );
+//         console.log( width, height );
 
-        hint = {
-            audio: false,
-            video: {
-                facingMode: 'environment',                
-                width: { min: width, max: width }
-            },
-        };
+//         hint = {
+//             audio: false,
+//             video: {
+//                 facingMode: 'environment',                
+//                 width: { min: width, max: width }
+//             },
+//         };
 
-        console.log( hint );        
-    }
+//         console.log( hint );        
+//     }
     
-    navigator.mediaDevices.getUserMedia( hint ).then( function( stream ) {
-        video.srcObject = stream;
-        video.addEventListener( 'loadedmetadata', () => {
-            video.play();
+//     navigator.mediaDevices.getUserMedia( hint ).then( function( stream ) {
+//         video.srcObject = stream;
+//         video.addEventListener( 'loadedmetadata', () => {
+//             video.play();
 
-            console.log( 'video', video, video.videoWidth, video.videoHeight );
+//             console.log( 'video', video, video.videoWidth, video.videoHeight );
 
-            start(
-                container, 
-                video, 
-                video.videoWidth, 
-                video.videoHeight, 
-                function() { 
-                    statsMain.update()
-                }, 
-                function() { 
-                    statsWorker.update();
-                },
-                null
-            );
-        } );
-    } );
-}
+//             start(
+//                 container, 
+//                 video, 
+//                 video.videoWidth, 
+//                 video.videoHeight, 
+//                 function() { 
+//                     statsMain.update()
+//                 }, 
+//                 function() { 
+//                     statsWorker.update();
+//                 },
+//                 null
+//             );
+//         } );
+//     } );
+// }
 
     </script>    
 </body>

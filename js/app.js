@@ -16,7 +16,13 @@
  * 
  **/
 
-
+const settings = {
+    autoRotate: {
+        x: 0,
+        y: 0.01,
+        z: 0,
+    }
+}
 
 const interpolationFactor = 2;
 
@@ -36,50 +42,89 @@ let trackedMatrix = {
     ]
 }
 
-var settings = {
-    autoRotate: {
-        x: 0,
-        y: 0.01,
-        z: 0,
-    }
-}
+
 
 let autoRotate;
 
 let ARObjects = {}
-let MarkerId = undefined;
+let currentMarkerId = undefined;
 
-let setMatrix = function( matrix, value ) {
-    let array = [];
-    
-    for( let key in value ) {
-        array[key] = value[key];
+let stats = {}
+
+
+let video = document.getElementById( 'video' );
+
+let renderer;
+let camera;
+let root;
+
+let canvas_process = document.createElement( 'canvas' );
+let context_process = canvas_process.getContext( '2d' );
+
+let vw, vh;
+let sw, sh;
+let pscale, sscale;
+let w, h;
+let pw, ph;
+let ox, oy;
+let worker;
+
+
+let init = function() {
+    initStats();
+    initScene();
+    initUserMedia();
+}
+
+let initUserMedia = function() {
+    if( !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia ) {
+        return false;
+    }
+
+    let hint = {
+        audio: false,
+        video: true
+    };
+
+    if( window.innerWidth < 800 ) {
+        let videoWidth = ( window.innerWidth < window.innerHeight ) ? 240 : 360;
+        let videoHeight = ( window.innerWidth < window.innerHeight ) ? 360 : 240;
+
+        console.log( videoWidth, videoHeight );
+
+        hint = {
+            audio: false,
+            video: {
+                facingMode: 'environment',                
+                width: { min: videoWidth, max: videoWidth }
+            },
+        };
+
+        console.log( hint );        
     }
     
-    if( typeof matrix.elements.set === 'function' ) {
-        matrix.elements.set( array );
-    } else {
-        matrix.elements = [].slice.call( array );
-    }
-};
+    navigator.mediaDevices.getUserMedia( hint )
+        .then( function( stream ) {
+            video.addEventListener( 'loadedmetadata', () => {
+                video.play();
 
-function start( container, video, input_width, input_height, render_update, track_update ) {
-    let vw, vh;
-    let sw, sh;
-    let pscale, sscale;
-    let w, h;
-    let pw, ph;
-    let ox, oy;
-    let worker;
+                console.log( 'video', video, video.videoWidth, video.videoHeight );
 
-    let canvas_process = document.createElement( 'canvas' );
-    let context_process = canvas_process.getContext( '2d' );
+                initTracking();
 
-    
-/**
- * RENDERER
- */
-    let renderer = new THREE.WebGLRenderer( { 
+                tick();
+                process();
+            } );
+
+            video.srcObject = stream;            
+    } );
+}
+
+let initScene = function() {
+    /**
+     * RENDERER
+     */
+    renderer = new THREE.WebGLRenderer( { 
         alpha: true, 
         antialias: true 
     } );
@@ -124,22 +169,18 @@ function start( container, video, input_width, input_height, render_update, trac
 /**
  * CAMERA
  */    
-    let camera = new THREE.Camera();
+    camera = new THREE.Camera();
     camera.matrixAutoUpdate = false;
     scene.add( camera );
-
-
 
     
 /**
  * ROOT
  */    
-    let root = new THREE.Object3D();
+    root = new THREE.Object3D();
     root.matrixAutoUpdate = false;
     
     scene.add( root );    
-
-
 
 
 /**
@@ -223,215 +264,244 @@ function start( container, video, input_width, input_height, render_update, trac
     object.position.z = 1;
 
     ARObjects[3] = object;
-    root.add( ARObjects[3] ); 
+    root.add( ARObjects[3] );     
+}
+
+let initTracking = function() {
+    vw = video.videoWidth;
+    vh = video.videoHeight;
+
+    pscale = 1;
+    sscale = 1;
+
+    sw = vw * sscale;
+    sh = vh * sscale;
+
+    renderer.domElement.width = sw;
+    renderer.domElement.height = sh;
+    w = vw * pscale;
+    h = vh * pscale;
+    pw = w; // Math.max( w, h / 3 * 4 );
+    ph = h; // Math.max( h, w / 4 * 3 );
+    ox = ( pw - w ) / 2;
+    oy = ( ph - h ) / 2;
+
+
+    canvas_process.width = pw;
+    canvas_process.height = ph;
+
+
+    renderer.setSize( sw, sh );
+
+
+    console.table( [
+        ['vw', vw],
+        ['vh', vh],
+        ['pscale', pscale],
+        ['sscale', sscale],
+        ['sw', sw],
+        ['sh', sh],
+        ['w', w],
+        ['h', h],
+        ['pw', pw],
+        ['ph', ph],
+        ['ox', oy]
+    ] );
 
 
 
 
-    let load = () => {
-        // 360 / 240
-        vw = input_width;
-        vh = input_height;
+    // service worker
+    worker = new Worker( 'js/worker.js' );
 
+    worker.postMessage( { 
+        type: 'load', 
+        pw: pw, 
+        ph: ph
+    } );
 
-        pscale = 1;
-        sscale = 1;
+    worker.onmessage = ( event ) => {
+        let data = event.data; 
 
-        sw = vw * sscale;
-        sh = vh * sscale;
+        switch( data.type ) {
+            case 'loaded': {                    
+                let proj = JSON.parse( data.proj );
+                let ratioW = pw / w;
+                let ratioH = ph / h;
+                
+                proj[0] *= ratioW;
+                proj[4] *= ratioW;
+                proj[8] *= ratioW;
+                proj[12] *= ratioW;
+                proj[1] *= ratioH;
+                proj[5] *= ratioH;
+                proj[9] *= ratioH;
+                proj[13] *= ratioH;
+                
+                // set camera matrix to detected 'projection' matrix
+                setMatrix( camera.projectionMatrix, proj );
 
-        renderer.domElement.width = sw;
-        renderer.domElement.height = sh;
-        w = vw * pscale;
-        h = vh * pscale;
-        pw = Math.max( w, h / 3 * 4 );
-        ph = Math.max( h, w / 4 * 3 );
-        ox = ( pw - w ) / 2;
-        oy = ( ph - h ) / 2;
-
-
-        canvas_process.width = pw;
-        canvas_process.height = ph;
-
-
-        renderer.setSize( sw, sh );
-
-
-        console.table( [
-            ['vw', vw],
-            ['vh', vh],
-            ['pscale', pscale],
-            ['sscale', sscale],
-            ['sw', sw],
-            ['sh', sh],
-            ['w', w],
-            ['h', h],
-            ['pw', pw],
-            ['ph', ph],
-            ['ox', oy]
-        ] );
-
-
-        console.log( 'A' );     
-
-
-        // service worker
-        worker = new Worker( 'js/worker.js' );
-
-        worker.postMessage( { 
-            type: 'load', 
-            pw: pw, 
-            ph: ph
-        } );
-
-        worker.onmessage = ( event ) => {
-            let data = event.data; 
-
-            switch( data.type ) {
-                case 'loaded': {                    
-                    let proj = JSON.parse( data.proj );
-                    let ratioW = pw / w;
-                    let ratioH = ph / h;
-                    
-                    proj[0] *= ratioW;
-                    proj[4] *= ratioW;
-                    proj[8] *= ratioW;
-                    proj[12] *= ratioW;
-                    proj[1] *= ratioH;
-                    proj[5] *= ratioH;
-                    proj[9] *= ratioH;
-                    proj[13] *= ratioH;
-                    
-                    // set camera matrix to detected 'projection' matrix
-                    setMatrix( camera.projectionMatrix, proj );
-
-                    document.body.classList.remove( 'loading' );
-                    
-                    break;
-                }
-
-                case 'found': {
-                    found( data );
-                    
-                    break;
-                }
-
-                case 'not found': {
-                    found( null );
-                    
-                    break;
-                }
+                document.body.classList.remove( 'loading' );
+                
+                break;
             }
-            
-            /**
-             * Callback
-             */
-            track_update();
-            
-            process();
-        };
-    };
 
-    
-    let world;
+            case 'found': {
+                found( data );
+                
+                break;
+            }
 
-
-    let found = ( data ) => {
-        if( !data ) {
-            console.log( 'not found' );
-
-            world = null;
-            MarkerId = undefined;
-        } else {
-            console.log( 'found', data.markerId );
-
-            world = JSON.parse( data.matrixGL_RH );
-            MarkerId = data.markerId;
+            case 'not found': {
+                found( null );
+                
+                break;
+            }
         }
-    };
-    
-
-    
-    /** 
-     * Renders the THREE.js scene
-     */
-    let draw = () => {
-
+        
         /**
-         * Callback 
+         * Callback
          */
-        render_update();
-        
-
-        // marker not found
-        if( MarkerId === undefined ) {
-            ARObjects[33].visible = false;
-            ARObjects[34].visible = false;
-            ARObjects[0].visible = false;
-            ARObjects[3].visible = false;
-
-        // marker found            
-        } else {
-            if( ARObjects[MarkerId] ) {
-                ARObjects[MarkerId].visible = true;
-            }
-
-            // interpolate matrix
-            for( let i = 0; i < 16; i++ ) { 
-                trackedMatrix.delta[i] = world[i] - trackedMatrix.interpolated[i];            
-                trackedMatrix.interpolated[i] = trackedMatrix.interpolated[i] + ( trackedMatrix.delta[i] / interpolationFactor );
-            }        
-
-            // set matrix of 'root' by detected 'world' matrix
-            setMatrix( root.matrix, trackedMatrix.interpolated );
-
-            // autorotate
-            ARObjects[33].rotation.y = ARObjects[33].rotation.y + settings.autoRotate.y;
-            ARObjects[34].rotation.y = ARObjects[34].rotation.y + settings.autoRotate.y;
-            ARObjects[0].rotation.y = ARObjects[0].rotation.y + settings.autoRotate.y;
-            ARObjects[3].rotation.y = ARObjects[3].rotation.y + settings.autoRotate.y;
+        if( stats['worker'] ) {
+            stats['worker'].update();
         }
-
         
-        renderer.render( scene, camera );
+        process();
     };
+}
+
+let initStats = function() {
+    stats['main'] = new Stats();
+    stats['main'].showPanel( 0 );
+    document.getElementById( 'stats1' ).appendChild( stats['main'].dom );
+
+    stats['worker'] = new Stats();
+    stats['worker'].showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+    document.getElementById( 'stats2' ).appendChild( stats['worker'].dom );    
+}
 
 
+    
+let world;
+
+
+let found = function( data ) {
+    if( !data ) {
+        console.log( 'not found' );
+
+        world = null;
+        currentMarkerId = undefined;
+    } else {
+        console.log( 'found', data.markerId );
+
+        world = JSON.parse( data.matrixGL_RH );
+        currentMarkerId = data.markerId;
+    }
+};
+
+
+
+/** 
+ * Renders the THREE.js scene
+ */
+let draw = function() {
 
     /**
-     * This is called on every frame 
-     */ 
-    function process() {
-        // clear canvas
-        context_process.fillStyle = 'black';
-        context_process.fillRect( 0, 0, pw, ph );
-        
-        // draw video to canvas
-        context_process.drawImage( video, 0, 0, vw, vh, ox, oy, w, h );
-    
-        // send video frame to worker
-        let imageData = context_process.getImageData( 0, 0, pw, ph );
-        worker.postMessage( 
-            { 
-                type: 'process', 
-                imagedata: imageData 
-            }, 
-            [ 
-                imageData.data.buffer
-            ]
-        );
+     * Callback 
+     */
+    if( stats['main'] ) {
+        stats['main'].update();
     }
     
-    
-    let tick = () => {
-        draw();
-        
-        requestAnimationFrame( tick );
-    };
-    
-    
 
-    load();
-    tick();
-    process();
+    // marker not found
+    if( currentMarkerId === undefined ) {
+        ARObjects[33].visible = false;
+        ARObjects[34].visible = false;
+        ARObjects[0].visible = false;
+        ARObjects[3].visible = false;
+
+    // marker found            
+    } else {
+        if( ARObjects[currentMarkerId] ) {
+            ARObjects[currentMarkerId].visible = true;
+        }
+
+        // interpolate matrix
+        for( let i = 0; i < 16; i++ ) { 
+            trackedMatrix.delta[i] = world[i] - trackedMatrix.interpolated[i];            
+            trackedMatrix.interpolated[i] = trackedMatrix.interpolated[i] + ( trackedMatrix.delta[i] / interpolationFactor );
+        }        
+
+        // set matrix of 'root' by detected 'world' matrix
+        setMatrix( root.matrix, trackedMatrix.interpolated );
+
+        // autorotate
+        ARObjects[33].rotation.y = ARObjects[33].rotation.y + settings.autoRotate.y;
+        ARObjects[34].rotation.y = ARObjects[34].rotation.y + settings.autoRotate.y;
+        ARObjects[0].rotation.y = ARObjects[0].rotation.y + settings.autoRotate.y;
+        ARObjects[3].rotation.y = ARObjects[3].rotation.y + settings.autoRotate.y;
+    }
+
+    
+    renderer.render( scene, camera );
+};
+
+
+
+/**
+ * This is called on every frame 
+ */ 
+let process = function() {
+    // clear canvas
+    context_process.fillStyle = 'black';
+    context_process.fillRect( 0, 0, pw, ph );
+    
+    // draw video to canvas
+    context_process.drawImage( video, 0, 0, vw, vh, ox, oy, w, h );
+
+    // send video frame to worker
+    let imageData = context_process.getImageData( 0, 0, pw, ph );
+    worker.postMessage( 
+        { 
+            type: 'process', 
+            imagedata: imageData 
+        }, 
+        [ 
+            imageData.data.buffer
+        ]
+    );
 }
+
+
+let tick = function() {
+    draw();
+    
+    requestAnimationFrame( tick );
+};
+
+
+
+
+/**
+ * Helper function
+ */
+let setMatrix = function( matrix, value ) {
+    let array = [];
+    
+    for( let key in value ) {
+        array[key] = value[key];
+    }
+    
+    if( typeof matrix.elements.set === 'function' ) {
+        matrix.elements.set( array );
+    } else {
+        matrix.elements = [].slice.call( array );
+    }
+};
+
+
+
+
+
+init();
