@@ -281,8 +281,8 @@ let initTracking = function() {
     renderer.domElement.height = sh;
     w = vw * pscale;
     h = vh * pscale;
-    pw = w; // Math.max( w, h / 3 * 4 );
-    ph = h; // Math.max( h, w / 4 * 3 );
+    pw = Math.max( w, h / 3 * 4 );
+    ph = Math.max( h, w / 4 * 3 );
     ox = ( pw - w ) / 2;
     oy = ( ph - h ) / 2;
 
