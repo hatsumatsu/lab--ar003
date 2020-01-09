@@ -17,14 +17,22 @@
  **/
 
 const settings = {
+    interpolationFactor: 2,
     autoRotate: {
-        x: 0,
+        x: 0.01,
         y: 0.01,
-        z: 0,
+        z: 0.01,
+    },
+    transition: {
+        duration: 2000
     }
 }
 
-const interpolationFactor = 2;
+var state = {
+    itemOpacity: 0,
+    currentMarkerId: undefined,
+    projectionMatrix: undefined,
+}
 
 let trackedMatrix = {
     // for interpolation
@@ -43,11 +51,29 @@ let trackedMatrix = {
 }
 
 
+let colors = {
+    'marker33': new THREE.Color( 0xff0000 ),
+    'marker34': new THREE.Color( 0xffff00 ),
+    'marker0': new THREE.Color( 0x00ff00 ),
+    'marker3': new THREE.Color( 0x00ffff ),
+}
+
+
+let ARVideo = document.getElementById( 'arvideo' );
+let texture = new THREE.VideoTexture( ARVideo );
+
+let material = new THREE.MeshStandardMaterial( { 
+    color: 0xffffff,
+    roughness: 0.4,
+    metalness: 0.8,
+    map: texture,
+    transparent: true         
+} );
+
 
 let autoRotate;
 
-let ARObjects = {}
-let currentMarkerId = undefined;
+let ARObject = undefined;
 
 let stats = {}
 
@@ -186,85 +212,7 @@ let initScene = function() {
 /**
  * OBJECT
  */     
-
-    let ARVideo = document.getElementById( 'arvideo' );
-    let texture = new THREE.VideoTexture( ARVideo );
-
     ARVideo.play();
-
-    let material = new THREE.MeshStandardMaterial( { 
-        color: 0xffffff,
-        roughness: 0.4,
-        metalness: 0.8,
-        map: texture         
-    } );
-
-
-    let geometry = new THREE.IcosahedronBufferGeometry( 1, 0 );
-    geometry.center();
-
-    // Object 1
-    let _material = material.clone();
-    _material.color = new THREE.Color( 0xff0000 );
-
-    console.log( _material ); 
-    let object = new THREE.Mesh( geometry, _material ); 
-    // object.id = 33;
-    object.position.x = 0;
-    object.position.y = 0;
-    object.position.z = 1;
-
-    ARObjects[33] = object;
-    root.add( ARObjects[33] );
-
-
-
-    // Object 2
-    _material = material.clone();
-    _material.color = new THREE.Color( 0xffff00 );
-
-    console.log( _material ); 
-    object = new THREE.Mesh( geometry, _material ); 
-    // object.id = 33;
-    object.position.x = 0;
-    object.position.y = 0;
-    object.position.z = 1;
-
-    ARObjects[34] = object;
-    root.add( ARObjects[34] );
-
-
-
-    // Object 3
-    _material = material.clone();
-    _material.color = new THREE.Color( 0x00ffff );
-
-    console.log( _material ); 
-    object = new THREE.Mesh( geometry, _material ); 
-    // object.id = 33;
-    object.position.x = 0;
-    object.position.y = 0;
-    object.position.z = 1;
-
-    ARObjects[0] = object;
-    root.add( ARObjects[0] ); 
-
-
-
-
-    // Object 4
-    _material = material.clone();
-    _material.color = new THREE.Color( 0x00ff00 );
-
-    console.log( _material ); 
-    object = new THREE.Mesh( geometry, _material ); 
-    // object.id = 33;
-    object.position.x = 0;
-    object.position.y = 0;
-    object.position.z = 1;
-
-    ARObjects[3] = object;
-    root.add( ARObjects[3] );     
 }
 
 let initTracking = function() {
@@ -309,8 +257,6 @@ let initTracking = function() {
     ] );
 
 
-
-
     // service worker
     worker = new Worker( 'js/worker.js' );
 
@@ -320,26 +266,26 @@ let initTracking = function() {
         ph: ph
     } );
 
-    worker.onmessage = ( event ) => {
+    worker.onmessage = function( event ) {
         let data = event.data; 
 
         switch( data.type ) {
             case 'loaded': {                    
-                let proj = JSON.parse( data.proj );
+                let cameraProjectionMatrix = JSON.parse( data.cameraProjectionMatrix );
                 let ratioW = pw / w;
                 let ratioH = ph / h;
                 
-                proj[0] *= ratioW;
-                proj[4] *= ratioW;
-                proj[8] *= ratioW;
-                proj[12] *= ratioW;
-                proj[1] *= ratioH;
-                proj[5] *= ratioH;
-                proj[9] *= ratioH;
-                proj[13] *= ratioH;
+                cameraProjectionMatrix[0] *= ratioW;
+                cameraProjectionMatrix[4] *= ratioW;
+                cameraProjectionMatrix[8] *= ratioW;
+                cameraProjectionMatrix[12] *= ratioW;
+                cameraProjectionMatrix[1] *= ratioH;
+                cameraProjectionMatrix[5] *= ratioH;
+                cameraProjectionMatrix[9] *= ratioH;
+                cameraProjectionMatrix[13] *= ratioH;
                 
-                // set camera matrix to detected 'projection' matrix
-                setMatrix( camera.projectionMatrix, proj );
+                // set camera matrix to detected camera projection matrix
+                setMatrix( camera.projectionMatrix, cameraProjectionMatrix );
 
                 document.body.classList.remove( 'loading' );
                 
@@ -347,13 +293,13 @@ let initTracking = function() {
             }
 
             case 'found': {
-                found( data );
+                updateScene( data );
                 
                 break;
             }
 
             case 'not found': {
-                found( null );
+                updateScene( null );
                 
                 break;
             }
@@ -380,24 +326,79 @@ let initStats = function() {
     document.getElementById( 'stats2' ).appendChild( stats['worker'].dom );    
 }
 
+let updateScene = function( data ) {
+    // nothing found
+    if( !data || data.markerId < 0 ) {
+        state.projectionMatrix = undefined;
 
-    
-let world;
+        if( state.currentMarkerId ) {
+            state.currentMarkerId = undefined;        
 
+            removeItem();
+        }
 
-let found = function( data ) {
-    if( !data ) {
-        console.log( 'not found' );
+        state.currentMarkerId = undefined;                
 
-        world = null;
-        currentMarkerId = undefined;
+    // marker found
     } else {
-        console.log( 'found', data.markerId );
+        state.projectionMatrix = JSON.parse( data.matrixGL_RH );
 
-        world = JSON.parse( data.matrixGL_RH );
-        currentMarkerId = data.markerId;
+        if( !state.currentMarkerId ) {
+            state.currentMarkerId = data.markerId;        
+            
+            addItem();
+        }
+
+        state.currentMarkerId = data.markerId;        
     }
 };
+
+let removeItem = function() {
+    console.log( 'removeItem()', root.children.length );
+
+    state.itemOpacity = 0;
+
+    let item = scene.getObjectByName( 'item', true );   
+
+    item.geometry.dispose(); 
+    item.material.dispose(); 
+    root.remove( item );
+    root.remove( ARObject );
+
+    ARObject = undefined;
+    state.currentMarkerId = undefined;
+    
+}
+
+let addItem = function() {
+    console.log( 'addItem()', state.currentMarkerId );
+
+    state.itemOpacity = 0;    
+
+
+    let geometry = new THREE.IcosahedronBufferGeometry( 1, 0 );
+    geometry.center();
+
+    // Object 1
+    let _material = material.clone();
+    _material.color = colors[ 'marker' + state.currentMarkerId ];
+
+    let object = new THREE.Mesh( geometry, _material ); 
+    object.name = 'item';
+    object.position.x = 0;
+    object.position.y = 0;
+    object.position.z = 1;
+
+    ARObject = object;
+    root.add( ARObject );    
+
+    anime( {
+        targets: state,
+        itemOpacity: [0,1],
+        duration: settings.transition.duration,
+        round: 1000
+    } );    
+}
 
 
 
@@ -406,7 +407,7 @@ let found = function( data ) {
  */
 let draw = function() {
 
-    /**
+    /**e
      * Callback 
      */
     if( stats['main'] ) {
@@ -415,32 +416,27 @@ let draw = function() {
     
 
     // marker not found
-    if( currentMarkerId === undefined ) {
-        ARObjects[33].visible = false;
-        ARObjects[34].visible = false;
-        ARObjects[0].visible = false;
-        ARObjects[3].visible = false;
+    if( state.currentMarkerId === undefined ) {
 
-    // marker found            
     } else {
-        if( ARObjects[currentMarkerId] ) {
-            ARObjects[currentMarkerId].visible = true;
+
+        if( ARObject ) {
+            ARObject.material.opacity = state.itemOpacity;
         }
 
         // interpolate matrix
         for( let i = 0; i < 16; i++ ) { 
-            trackedMatrix.delta[i] = world[i] - trackedMatrix.interpolated[i];            
-            trackedMatrix.interpolated[i] = trackedMatrix.interpolated[i] + ( trackedMatrix.delta[i] / interpolationFactor );
+            trackedMatrix.delta[i] = state.projectionMatrix[i] - trackedMatrix.interpolated[i];            
+            trackedMatrix.interpolated[i] = trackedMatrix.interpolated[i] + ( trackedMatrix.delta[i] / settings.interpolationFactor );
         }        
 
         // set matrix of 'root' by detected 'world' matrix
         setMatrix( root.matrix, trackedMatrix.interpolated );
 
         // autorotate
-        ARObjects[33].rotation.y = ARObjects[33].rotation.y + settings.autoRotate.y;
-        ARObjects[34].rotation.y = ARObjects[34].rotation.y + settings.autoRotate.y;
-        ARObjects[0].rotation.y = ARObjects[0].rotation.y + settings.autoRotate.y;
-        ARObjects[3].rotation.y = ARObjects[3].rotation.y + settings.autoRotate.y;
+        if( ARObject ) {
+            ARObject.rotation.y = ARObject.rotation.y + settings.autoRotate.y;
+        }
     }
 
     
@@ -477,7 +473,9 @@ let process = function() {
 let tick = function() {
     draw();
     
-    requestAnimationFrame( tick );
+    requestAnimationFrame( function() {
+        tick(); 
+    } );
 };
 
 

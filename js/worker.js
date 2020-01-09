@@ -24,7 +24,7 @@ function load(msg) {
     let param = new ARCameraParam( '../data/camera_para.dat' );
     param.onload = function () {
         ar = new ARController( msg.pw, msg.ph, param );
-        let cameraMatrix = ar.getCameraMatrix();
+        let cameraProjectionMatrix = ar.getCameraMatrix();
 
         ar.setPatternDetectionMode( artoolkit.AR_MATRIX_CODE_DETECTION );        
 
@@ -34,7 +34,7 @@ function load(msg) {
             markerResult = {
                 type: 'found', 
                 matrixGL_RH: JSON.stringify( ev.data.matrixGL_RH ), 
-                proj: JSON.stringify( cameraMatrix ),
+                cameraProjectionMatrix: JSON.stringify( cameraProjectionMatrix ),
                 markerId: ev.data.marker.id
             }
         });
@@ -45,7 +45,7 @@ function load(msg) {
 
         postMessage( {
             type: 'loaded', 
-            proj: JSON.stringify( cameraMatrix )
+            cameraProjectionMatrix: JSON.stringify( cameraProjectionMatrix )
         } );
     };
 }
