@@ -67,7 +67,7 @@ let material = new THREE.MeshStandardMaterial( {
     roughness: 0.4,
     metalness: 0.8,
     map: texture,
-    transparent: true         
+    transparent: true
 } );
 
 
@@ -177,8 +177,8 @@ let initScene = function() {
     scene.add( light );
 
 
-    const light2 = new THREE.PointLight( 0xdddddd );
-    light2.position.set( 10, 10, 10 );
+    const light2 = new THREE.PointLight( 0xeeeeee, 0, 1000 );
+    light2.position.set( 10, 10, 10 );  
     scene.add( light2 ); 
 
 
@@ -213,6 +213,34 @@ let initScene = function() {
  * OBJECT
  */     
     ARVideo.play();
+
+
+/**
+ * GROUND
+ */
+
+
+    let groundGeometry = new THREE.PlaneBufferGeometry( 1, 1, 1 );
+
+    // Object 1
+    let groundMaterial = new THREE.MeshLambertMaterial( {
+        color: new THREE.Color( 0x000000 ),
+        transparent: true,
+        opacity: 0.4,
+        side: THREE.DoubleSide,
+        alphaMap: new THREE.TextureLoader().load( 'img/shadow.png' )
+    } )
+
+    let ground = new THREE.Mesh( groundGeometry, groundMaterial ); 
+
+    ground.name = 'ground';
+    ground.position.x = 0;
+    ground.position.y = 0;
+    ground.position.z = 0;
+
+    ground.scale.set( 10, 10, 10 );
+
+    root.add( ground ); 
 }
 
 let initTracking = function() {
@@ -387,9 +415,10 @@ let addItem = function() {
     object.name = 'item';
     object.position.x = 0;
     object.position.y = 0;
-    object.position.z = 1;
+    object.position.z = 3;
 
     object.scale.set( 1.5, 1.5, 1.5 );
+
 
     ARObject = object;
     root.add( ARObject );    
