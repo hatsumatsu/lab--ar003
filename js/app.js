@@ -376,7 +376,7 @@ let addItem = function() {
 
     state.itemOpacity = 0;    
 
-    let geometry = new THREE.IcosahedronBufferGeometry( 1, 0 );
+    let geometry = new THREE.SphereBufferGeometry( 1, 32, 32 );
     geometry.center();
 
     // Object 1
