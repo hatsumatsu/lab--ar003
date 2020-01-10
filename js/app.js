@@ -52,10 +52,10 @@ let trackedMatrix = {
 
 
 let colors = {
-    'marker33': new THREE.Color( 0xff0000 ),
-    'marker34': new THREE.Color( 0xffff00 ),
-    'marker0': new THREE.Color( 0x00ff00 ),
-    'marker3': new THREE.Color( 0x00ffff ),
+    'marker33': new THREE.Color( 0xffffff ),
+    'marker34': new THREE.Color( 0xffffff ),
+    'marker0': new THREE.Color( 0xffffff ),
+    'marker3': new THREE.Color( 0xffffff ),
 }
 
 
@@ -85,7 +85,7 @@ let camera;
 let root;
 
 let canvas_process = document.createElement( 'canvas' );
-let context_process = canvas_process.getContext( '2d' );
+let context_process = canvas_process.getContext( '2d', { alpha: false } );
 
 let vw, vh;
 let sw, sh;
@@ -97,7 +97,7 @@ let worker;
 
 
 let init = function() {
-    initStats();
+    // initStats();
     initScene();
     initUserMedia();
 }
@@ -253,7 +253,8 @@ let initTracking = function() {
         ['h', h],
         ['pw', pw],
         ['ph', ph],
-        ['ox', oy]
+        ['ox', ox],
+        ['oy', oy]
     ] );
 
 
@@ -375,7 +376,6 @@ let addItem = function() {
 
     state.itemOpacity = 0;    
 
-
     let geometry = new THREE.IcosahedronBufferGeometry( 1, 0 );
     geometry.center();
 
@@ -388,6 +388,8 @@ let addItem = function() {
     object.position.x = 0;
     object.position.y = 0;
     object.position.z = 1;
+
+    object.scale.set( 1.5, 1.5, 1.5 );
 
     ARObject = object;
     root.add( ARObject );    
