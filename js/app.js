@@ -74,6 +74,7 @@ let material = new THREE.MeshStandardMaterial( {
 let autoRotate;
 
 let ARObject = undefined;
+let ground;
 
 let stats = {}
 
@@ -231,7 +232,7 @@ let initScene = function() {
         alphaMap: new THREE.TextureLoader().load( 'img/shadow.png' )
     } )
 
-    let ground = new THREE.Mesh( groundGeometry, groundMaterial ); 
+    ground = new THREE.Mesh( groundGeometry, groundMaterial ); 
 
     ground.name = 'ground';
     ground.position.x = 0;
@@ -453,6 +454,7 @@ let draw = function() {
 
         if( ARObject ) {
             ARObject.material.opacity = state.itemOpacity;
+            ground.material.opacity = state.itemOpacity * 0.4;
         }
 
         // interpolate matrix
