@@ -78,6 +78,8 @@ let ground;
 
 let stats = {}
 
+let transition;
+
 
 let video = document.getElementById( 'video' );
 
@@ -386,6 +388,10 @@ let updateScene = function( data ) {
 let removeItem = function() {
     console.log( 'removeItem()', root.children.length );
 
+    if( transition ) {
+        transition.pause();
+    }
+
     state.itemOpacity = 0;
 
     let item = scene.getObjectByName( 'item', true );   
@@ -396,8 +402,7 @@ let removeItem = function() {
     root.remove( ARObject );
 
     ARObject = undefined;
-    state.currentMarkerId = undefined;
-    
+    state.currentMarkerId = undefined;    
 }
 
 let addItem = function() {
@@ -424,7 +429,7 @@ let addItem = function() {
     ARObject = object;
     root.add( ARObject );    
 
-    anime( {
+    transition = anime( {
         targets: state,
         itemOpacity: [0,1],
         duration: settings.transition.duration,
@@ -456,8 +461,6 @@ let draw = function() {
             ARObject.material.opacity = state.itemOpacity;
         }
 
-        ground.material.opacity = state.itemOpacity * 0.4;
-
         // interpolate matrix
         for( let i = 0; i < 16; i++ ) { 
             trackedMatrix.delta[i] = state.projectionMatrix[i] - trackedMatrix.interpolated[i];            
@@ -473,6 +476,7 @@ let draw = function() {
         }
     }
 
+    ground.material.opacity = state.itemOpacity * 0.4;    
     
     renderer.render( scene, camera );
 };
