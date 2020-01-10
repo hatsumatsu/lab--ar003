@@ -454,8 +454,9 @@ let draw = function() {
 
         if( ARObject ) {
             ARObject.material.opacity = state.itemOpacity;
-            ground.material.opacity = state.itemOpacity * 0.4;
         }
+
+        ground.material.opacity = state.itemOpacity * 0.4;
 
         // interpolate matrix
         for( let i = 0; i < 16; i++ ) { 
