@@ -397,7 +397,7 @@ let updateScene = function( data ) {
         }
 
         state.currentMarkerId = data.markerId;        
-    }d
+    }
 };
 
 let removeItem = function() {
