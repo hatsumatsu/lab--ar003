@@ -64,8 +64,8 @@ let texture = new THREE.VideoTexture( ARVideo );
 
 let material = new THREE.MeshStandardMaterial( { 
     color: 0xffffff,
-    roughness: 0.4,
-    metalness: 0.8,
+    roughness: 0.6,
+    metalness: 0.2,
     map: texture,
     transparent: true
 } );
@@ -174,26 +174,38 @@ let initScene = function() {
 
 
 /**
+ * ROOT
+ */    
+    root = new THREE.Object3D();
+    root.matrixAutoUpdate = false;
+    
+    scene.add( root );   
+
+
+
+/**
  * LIGHTS
  */
-    const light = new THREE.AmbientLight( 0xaaaaaa );
+    const light = new THREE.AmbientLight( 0xcccccc );
     scene.add( light );
 
 
-    const light2 = new THREE.PointLight( 0xeeeeee, 0, 1000 );
-    light2.position.set( 10, 10, 10 );  
-    scene.add( light2 ); 
+    const light2 = new THREE.PointLight( 0xeeeeee );
+    light2.position.set( -5, 10, 10 );  
+    root.add( light2 ); 
 
 
-    const light3 = new THREE.PointLight( 0xdddddd );
-    light3.position.set( -10, 10, -10 );
+    const light3 = new THREE.PointLight( 0xcccccc );
+    light3.position.set( 5, -10, 10 );
     scene.add( light3 ); 
 
 
-    const light4 = new THREE.PointLight( 0xeeeeee );
-    light4.position.set( 12, 8, 20 );
-    scene.add( light4 ); 
 
+    // let sphereSize = 0.1;
+    // let pointLightHelper2 = new THREE.PointLightHelper( light2, sphereSize );
+    // scene.add( pointLightHelper2 );
+    // let pointLightHelper3 = new THREE.PointLightHelper( light3, sphereSize );
+    // scene.add( pointLightHelper3 );    
     
 /**
  * CAMERA
@@ -203,13 +215,8 @@ let initScene = function() {
     scene.add( camera );
 
     
-/**
- * ROOT
- */    
-    root = new THREE.Object3D();
-    root.matrixAutoUpdate = false;
-    
-    scene.add( root );    
+ 
+
 
 
 /**
@@ -244,6 +251,14 @@ let initScene = function() {
     ground.scale.set( 10, 10, 10 );
 
     root.add( ground ); 
+
+
+/**
+ * AUTOROTATE
+ */    
+    autoRotate = new THREE.Object3D();
+    root.add( autoRotate ); 
+
 }
 
 let initTracking = function() {
@@ -382,11 +397,13 @@ let updateScene = function( data ) {
         }
 
         state.currentMarkerId = data.markerId;        
-    }
+    }d
 };
 
 let removeItem = function() {
     console.log( 'removeItem()', root.children.length );
+
+    document.body.classList.remove( 'found' );    
 
     if( transition ) {
         transition.pause();
@@ -398,8 +415,8 @@ let removeItem = function() {
 
     item.geometry.dispose(); 
     item.material.dispose(); 
-    root.remove( item );
-    root.remove( ARObject );
+    autoRotate.remove( item );
+    autoRotate.remove( ARObject );
 
     ARObject = undefined;
     state.currentMarkerId = undefined;    
@@ -408,9 +425,11 @@ let removeItem = function() {
 let addItem = function() {
     console.log( 'addItem()', state.currentMarkerId );
 
+    document.body.classList.add( 'found' );    
+
     state.itemOpacity = 0;    
 
-    let geometry = new THREE.SphereBufferGeometry( 1, 32, 32 );
+    let geometry = new THREE.CylinderBufferGeometry( 1, 1, 0.25, 32, 1 );
     geometry.center();
 
     // Object 1
@@ -419,15 +438,18 @@ let addItem = function() {
 
     let object = new THREE.Mesh( geometry, _material ); 
     object.name = 'item';
+
+    object.rotation.y = THREE.Math.degToRad( 90 )
+
     object.position.x = 0;
     object.position.y = 0;
-    object.position.z = 3;
+    object.position.z = 3.5;
 
-    object.scale.set( 1.5, 1.5, 1.5 );
+    object.scale.set( 2, 2, 2 );
 
 
     ARObject = object;
-    root.add( ARObject );    
+    autoRotate.add( ARObject );    
 
     transition = anime( {
         targets: state,
@@ -472,7 +494,7 @@ let draw = function() {
 
         // autorotate
         if( ARObject ) {
-            ARObject.rotation.y = ARObject.rotation.y + settings.autoRotate.y;
+            autoRotate.rotation.z = autoRotate.rotation.z + settings.autoRotate.z;
         }
     }
 
