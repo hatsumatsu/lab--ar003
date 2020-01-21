@@ -17,7 +17,7 @@
  **/
 
 const settings = {
-    interpolationFactor: 2,
+    interpolationFactor: 8,
     autoRotate: {
         x: 0.01,
         y: 0.01,
